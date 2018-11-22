@@ -28,37 +28,31 @@ RUN set -ex; \
     apk add --virtual .phpmyadmin-phpexts-rundeps $runDeps; \
     apk del .build-deps
 
-# Copy configuration
-COPY etc /etc/
-
-# Copy main script
-COPY run.sh /run.sh
-RUN chmod u+rwx /run.sh
-
 # Calculate download URL
-ENV VERSION 4.8+snapshot
+ENV VERSION 5.0+snapshot
 ENV URL https://files.phpmyadmin.net/snapshots/phpMyAdmin-${VERSION}-all-languages.tar.gz
 LABEL version=$VERSION
 
 # Download tarball, verify it using gpg and extract
 RUN set -ex; \
-    curl --output phpMyAdmin.tar.gz --location $URL; \
-    tar xzf phpMyAdmin.tar.gz; \
-    rm -f phpMyAdmin.tar.gz phpMyAdmin.tar.gz.asc; \
-    mv phpMyAdmin-$VERSION-all-languages /www; \
-    rm -rf /www/setup/ /www/examples/ /www/test/ /www/po/ /www/composer.json /www/RELEASE-DATE-$VERSION; \
-    sed -i "s@define('CONFIG_DIR'.*@define('CONFIG_DIR', '/etc/phpmyadmin/');@" /www/libraries/vendor_config.php; \
-    chown -R root:nobody /www; \
-    find /www -type d -exec chmod 750 {} \; ; \
-    find /www -type f -exec chmod 640 {} \; 
-
+    curl --output phpMyAdmin.tar.xz --location $URL; \
+    tar -xf phpMyAdmin.tar.xz -C /usr/src; \
+    mv /usr/src/phpMyAdmin-$VERSION-all-languages /usr/src/phpmyadmin; \
+    rm -rf /usr/src/phpmyadmin/setup/ /usr/src/phpmyadmin/examples/ /usr/src/phpmyadmin/test/ /usr/src/phpmyadmin/po/ /usr/src/phpmyadmin/composer.json /usr/src/phpmyadmin/RELEASE-DATE-$VERSION; \
+    sed -i "s@define('CONFIG_DIR'.*@define('CONFIG_DIR', '/etc/phpmyadmin/');@" /usr/src/phpmyadmin/libraries/vendor_config.php; \
 # Add directory for sessions to allow session persistence
-RUN mkdir /sessions \
-    && mkdir -p /www/tmp \
-    && chmod -R 777 /www/tmp
+    mkdir /sessions; \
+    mkdir -p /var/nginx/client_body_temp; \
+
+# Copy configuration
+COPY etc /etc/
+COPY php.ini /usr/local/etc/php/conf.d/php-phpmyadmin.ini
+
+# Copy main script
+COPY run.sh /run.sh
 
 # We expose phpMyAdmin on port 80
 EXPOSE 80
 
 ENTRYPOINT [ "/run.sh" ]
-CMD ["phpmyadmin"]
+CMD ["supervisord", "-n", "-j", "/supervisord.pid"]
