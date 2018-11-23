@@ -42,7 +42,7 @@ RUN set -ex; \
     sed -i "s@define('CONFIG_DIR'.*@define('CONFIG_DIR', '/etc/phpmyadmin/');@" /usr/src/phpmyadmin/libraries/vendor_config.php; \
 # Add directory for sessions to allow session persistence
     mkdir /sessions; \
-    mkdir -p /var/nginx/client_body_temp; \
+    mkdir -p /var/nginx/client_body_temp
 
 # Copy configuration
 COPY etc /etc/
